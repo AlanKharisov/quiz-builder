@@ -60,12 +60,24 @@ cp .env.example .env.local  # NEXT_PUBLIC_API_URL=http://localhost:4000
 npm run dev                 # http://localhost:3000
 ```
 
-Open http://localhost:3000. It redirects to the quiz list.
+Open <http://localhost:3000>. It redirects to the quiz list.
+
+## Environment variables
+
+Only `.env.example` files are committed; copy them as shown above.
+
+| File                  | Variable              | Default                 | Purpose                             |
+| --------------------- | --------------------- | ----------------------- | ----------------------------------- |
+| `backend/.env`        | `DATABASE_URL`        | `file:./dev.db`         | SQLite file, relative to `prisma/`  |
+| `backend/.env`        | `PORT`                | `4000`                  | API port                            |
+| `backend/.env`        | `CORS_ORIGIN`         | `http://localhost:3000` | Frontend origin allowed to call API |
+| `frontend/.env.local` | `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | API base URL used by the browser    |
 
 ## Pages
 
 | Route           | Description                                                            |
 | --------------- | ---------------------------------------------------------------------- |
+| `/`             | Redirects to `/quizzes`                                                |
 | `/quizzes`      | All quizzes with the number of questions; delete with the trash icon   |
 | `/quizzes/[id]` | Read-only view of a quiz with its questions and correct answers marked |
 | `/create`       | Form: title + questions; add/remove questions and options dynamically  |
@@ -79,7 +91,8 @@ Open http://localhost:3000. It redirects to the quiz list.
 | `GET`    | `/quizzes/:id` | Full quiz with questions (`404` if not found) |
 | `DELETE` | `/quizzes/:id` | Delete a quiz and its questions → `204`       |
 
-Invalid input returns `400` with field-level details:
+A non-numeric or non-positive id (for example `/quizzes/abc`) returns `400`, an unknown route
+returns `404`. Invalid input returns `400` with field-level details:
 
 ```json
 {
@@ -118,20 +131,29 @@ curl -X POST http://localhost:4000/quizzes \
   }'
 ```
 
-Validation rules (shared by the form and the API): title and question text are required, at least
-one question per quiz, a short-answer question needs its correct answer, a multiple-choice
-question needs at least two options and at least one of them marked correct.
+Validation rules (shared by the form and the API):
+
+- title is required (max 200 characters) and a quiz needs at least one question;
+- question text is required (max 500 characters);
+- a short-answer question needs its correct answer (max 200 characters);
+- a multiple-choice question needs at least two options (max 200 characters each) and at least
+  one of them marked correct.
 
 ## Code quality
 
-Both apps have ESLint and Prettier set up:
+Both apps have ESLint, Prettier and TypeScript checks set up. Run the commands inside `backend/`
+or `frontend/`:
 
 ```bash
 npm run lint          # ESLint
-npm run format        # Prettier (write)
 npm run format:check  # Prettier (check only)
+npm run format        # Prettier (fix formatting)
 npm run typecheck     # tsc --noEmit
+npm run build         # backend: tsc -> dist/, frontend: next build
 ```
+
+> Stop `npm run dev` in `frontend/` before running `npm run build` there: both use the `.next`
+> folder.
 
 ## Design notes
 
