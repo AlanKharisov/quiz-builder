@@ -1,34 +1,53 @@
 import { z } from 'zod';
 
-// form keeps fields for all question types, toPayload() sends only the needed ones
-const optionSchema = z.object({
-  text: z.string().trim().min(1, 'Option text is required'),
-  isCorrect: z.boolean(),
-});
+// same limits as the backend (backend/src/schemas/quiz.ts)
+const MAX_QUESTION_LENGTH = 500;
+const MAX_ANSWER_LENGTH = 200;
 
+// form keeps fields for all question types, toPayload() sends only the needed ones.
+// answer/option limits are checked only for the current type, so hidden fields never block submit
 const questionSchema = z
   .object({
     type: z.enum(['BOOLEAN', 'INPUT', 'CHECKBOX']),
-    text: z.string().trim().min(1, 'Question text is required'),
+    text: z
+      .string()
+      .trim()
+      .min(1, 'Question text is required')
+      .max(
+        MAX_QUESTION_LENGTH,
+        `Question text is too long (max ${MAX_QUESTION_LENGTH} characters)`,
+      ),
     booleanAnswer: z.enum(['true', 'false']),
     inputAnswer: z.string(),
     options: z.array(z.object({ text: z.string(), isCorrect: z.boolean() })),
   })
   .superRefine((q, ctx) => {
-    if (q.type === 'INPUT' && !q.inputAnswer.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['inputAnswer'],
-        message: 'Correct answer is required',
-      });
+    if (q.type === 'INPUT') {
+      const answer = q.inputAnswer.trim();
+      if (!answer) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['inputAnswer'],
+          message: 'Correct answer is required',
+        });
+      } else if (answer.length > MAX_ANSWER_LENGTH) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['inputAnswer'],
+          message: `Correct answer is too long (max ${MAX_ANSWER_LENGTH} characters)`,
+        });
+      }
     }
     if (q.type === 'CHECKBOX') {
       q.options.forEach((option, i) => {
-        if (!optionSchema.safeParse(option).success) {
+        const text = option.text.trim();
+        if (!text || text.length > MAX_ANSWER_LENGTH) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['options', i, 'text'],
-            message: 'Option text is required',
+            message: text
+              ? `Option text is too long (max ${MAX_ANSWER_LENGTH} characters)`
+              : 'Option text is required',
           });
         }
       });
