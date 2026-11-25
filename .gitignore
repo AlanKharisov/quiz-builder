@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# env files (see .env.example in each app)
+.env
+.env.local
+.env*.local
+
+# SQLite database
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+.DS_Store
